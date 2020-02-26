@@ -66,6 +66,11 @@ class InstallCommand extends Command
             throw new ProcessFailedException($process);
         }
 
+        $output->writeln('Running Composer Install');
+        $process = new Process(['composer', 'install', '-d', $this->drupalRoot]);
+        $process->setTimeout(1200);
+        $process->run();
+
         return 1;
     }
 }
