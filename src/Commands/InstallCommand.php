@@ -8,27 +8,35 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
+use Symfony\Component\Console\Question\ChoiceQuestion;
 
 class InstallCommand extends Command
 {
     protected function configure()
     {
         $this->setName('install')
-            ->setDescription('Install a site release')
-            ->addArgument('release', InputArgument::REQUIRED, 'Release name');
+             ->setDescription('Install a site release');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        if ($output->isVerbose()) {
-            $output->writeln(sprintf('Installing release: %s', $input->getArgument('release')));
-        }
-
         $client = HttpClient::create();
         $response = $client->request('GET', 'https://api.github.com/repos/dof-dss/nidirect-drupal/tags');
 
         $content = $response->getContent();
-        $output->writeln($content);
+
+        $releases = json_decode($content);
+        $release_names = [];
+
+        foreach ($releases as $release) {
+            $release_names[] = $release->name;
+        }
+
+        $helper = $this->getHelper('question');
+        $question_release = new ChoiceQuestion('Please select a release to install', $release_names, 0);
+
+        $requested_release = $helper->ask($input, $output, $question_release);
+        $output->writeln('You have selected the release: '. $requested_release);
 
         return 1;
     }
