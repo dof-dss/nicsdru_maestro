@@ -9,9 +9,13 @@ use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Console\Question\ChoiceQuestion;
+use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
+use Symfony\Component\Filesystem\Filesystem;
 
 class InstallCommand extends Command
 {
+    protected $drupalRoot = 'drupal8';
+
     protected function configure()
     {
         $this->setName('install')
@@ -36,7 +40,15 @@ class InstallCommand extends Command
         $question_release = new ChoiceQuestion('Please select a release to install', $release_names, 0);
 
         $requested_release = $helper->ask($input, $output, $question_release);
-        $output->writeln('You have selected the release: '. $requested_release);
+
+        $filesystem = new Filesystem();
+
+        if ($filesystem->exists($this->drupalRoot)) {
+            $output->writeln('Deleting existing Drupal directory.');
+            $filesystem->remove([$this->drupalRoot]);
+        }
+
+        $output->writeln(sprintf('Cloning release: %s', $requested_release));
 
         $process = new Process(['git', 'clone', 'git@github.com:dof-dss/nidirect-drupal.git', 'drupal8', '--branch', $requested_release]);
         $process->run();
