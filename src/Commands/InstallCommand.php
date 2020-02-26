@@ -9,6 +9,7 @@ use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Console\Question\ChoiceQuestion;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 use Symfony\Component\Filesystem\Filesystem;
 
@@ -44,6 +45,14 @@ class InstallCommand extends Command
         $filesystem = new Filesystem();
 
         if ($filesystem->exists($this->drupalRoot)) {
+
+            $overwrite_question = new ConfirmationQuestion('The Drupal directory exists and will be overwritten, do you want to continue? (Y/n) ', true);
+
+            if (!$helper->ask($input, $output, $overwrite_question)) {
+                $output->writeln('Aborting install.');
+                return 0;
+            }
+
             $output->writeln('Deleting existing Drupal directory.');
             $filesystem->remove([$this->drupalRoot]);
         }
