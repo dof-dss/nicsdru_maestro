@@ -38,6 +38,13 @@ class InstallCommand extends Command
         $requested_release = $helper->ask($input, $output, $question_release);
         $output->writeln('You have selected the release: '. $requested_release);
 
+        $process = new Process(['git', 'clone', 'git@github.com:dof-dss/nidirect-drupal.git', 'drupal8', '--branch', $requested_release]);
+        $process->run();
+
+        if (!$process->isSuccessful()) {
+            throw new ProcessFailedException($process);
+        }
+
         return 1;
     }
 }
