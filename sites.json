@@ -1,7 +1,7 @@
 [
   {
     "name": "NIDirect",
-    "repo_path": "dof-dss/nidirect-drupal.git",
+    "repo_path": "dof-dss/nidirect-drupal",
     "commands": {
       "cache clear": "lando drush cr",
       "config import": "lando drush cim -y",

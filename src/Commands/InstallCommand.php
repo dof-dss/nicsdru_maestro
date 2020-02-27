@@ -46,12 +46,9 @@ class InstallCommand extends Command
             return 0;
         }
 
-        $output->writeln('Installing : ' . $requested_site['name']);
-
-        $response = $client->request('GET', 'https://api.github.com/repos/dof-dss/nidirect-drupal/tags');
+        $response = $client->request('GET', 'https://api.github.com/repos/' . $requested_site['repo_path'] . '/tags');
 
         $content = $response->getContent();
-
         $releases = json_decode($content);
         $release_names = [];
 
@@ -59,7 +56,7 @@ class InstallCommand extends Command
             $release_names[] = $release->name;
         }
 
-        $question_release = new ChoiceQuestion('Please select a release to install', $release_names, 0);
+        $question_release = new ChoiceQuestion('Please select a ' . $requested_site['name'] . ' release to install', $release_names, 0);
         $requested_release = $helper->ask($input, $output, $question_release);
 
         if ($filesystem->exists($this->drupalRoot)) {
