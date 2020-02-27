@@ -1,0 +1,22 @@
+[
+  {
+    "name": "NIDirect",
+    "repo_path": "dof-dss/nidirect-drupal.git",
+    "commands": {
+      "cache clear": "lando drush cr",
+      "config import": "lando drush cim -y",
+      "update db": "lando drush updb -y",
+      "cache clear": "lando drush cr"
+    }
+  },
+  {
+    "name": "Cybersecurity",
+    "repo_path": "dof-dss/nicsdru_cybersecurity",
+    "commands": {
+      "cache clear": "lando drush cr",
+      "config import": "lando drush cim -y",
+      "update db": "lando drush updb -y",
+      "cache clear": "lando drush cr"
+    }
+  }
+]
