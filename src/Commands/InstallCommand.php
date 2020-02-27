@@ -1,7 +1,6 @@
 <?php
 namespace Maestro\Commands;
 
-use http\Exception;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -13,7 +12,7 @@ use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Console\Exception as ConsoleException;
+use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 
 class InstallCommand extends Command
 {
@@ -31,12 +30,15 @@ class InstallCommand extends Command
         $client = HttpClient::create();
         $helper = $this->getHelper('question');
 
+        $processingStyle = new OutputFormatterStyle('yellow', 'black', ['bold']);
+        $output->getFormatter()->setStyle('processing', $processingStyle);
+
         $content = file_get_contents('./sites.json');
 
         $sites = json_decode($content, TRUE);
 
         if (count($sites) > 1) {
-            $question_site = new ChoiceQuestion('Please select a site to install', array_column($sites, 'name'), 0);
+            $question_site = new ChoiceQuestion('<question>Please select a site to install</>', array_column($sites, 'name'), 0);
             $requested_site = $helper->ask($input, $output, $question_site);
             $requested_site = $sites[array_search($requested_site, array_column($sites, 'name'))];
         } elseif (count($sites) === 1) {
@@ -56,35 +58,38 @@ class InstallCommand extends Command
             $release_names[] = $release->name;
         }
 
-        $question_release = new ChoiceQuestion('Please select a ' . $requested_site['name'] . ' release to install', $release_names, 0);
+        $question_release = new ChoiceQuestion('<>Please select a ' . $requested_site['name'] . ' release to install</>', $release_names, 0);
         $requested_release = $helper->ask($input, $output, $question_release);
 
         if ($filesystem->exists($this->drupalRoot)) {
 
-            $overwrite_question = new ConfirmationQuestion('The Drupal directory exists and will be overwritten, do you want to continue? (Y/n) ', true);
+            $overwrite_question = new ConfirmationQuestion('<question>The Drupal directory exists and will be overwritten, do you want to continue? (Y/n) </>', true);
 
             if (!$helper->ask($input, $output, $overwrite_question)) {
                 $output->writeln('Aborting install.');
                 return 0;
             }
 
-            $output->writeln('Deleting existing Drupal directory.');
+            $output->writeln('<comment>Deleting existing Drupal directory.</>');
             $filesystem->remove([$this->drupalRoot]);
         }
 
-        $output->writeln(sprintf('Cloning release: %s', $requested_release));
+        $output->writeln('<processing>Cloning release: ' . $requested_release . '</>');
 
-        $process = new Process(['git', 'clone', 'git@github.com:dof-dss/nidirect-drupal.git', 'drupal8', '--branch', $requested_release]);
+        $process = new Process(['git', 'clone', 'git@github.com:' . $requested_site['repo_path'] . '.git', 'drupal8', '--branch', $requested_release]);
+        $process->setTimeout(1200);
         $process->run();
 
         if (!$process->isSuccessful()) {
             throw new ProcessFailedException($process);
         }
 
-        $output->writeln('Running Composer Install');
+        $output->writeln('<processing>Running Composer Install</>');
         $process = new Process(['composer', 'install', '-d', $this->drupalRoot]);
         $process->setTimeout(1200);
         $process->run();
+
+        $output->writeln('<bg=green;fg=black;options=bold>Install complete</>');
 
         return 1;
     }
