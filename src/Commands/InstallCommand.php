@@ -32,11 +32,26 @@ class InstallCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $output->writeln($this->settings['drupal_root']);
-        return 0;
-
         $filesystem = new Filesystem();
         $client = HttpClient::create();
+
+        $process = new Process(['lando', 'info']);
+        $process->run();
+        $info = $process->getOutput();
+        preg_match_all("/(http:\/\/.+)\'/m", $info, $matches, PREG_SET_ORDER, 0);
+
+        if (empty($matches[0][1])) {
+            $output->writeln('<error>It doesn\'t look like you have a running Lando site.</>');
+            return 0;
+        }
+
+        $response = $client->request('GET', $matches[0][1]);
+
+        if ($response->getStatusCode() !== 200) {
+            $output->writeln('<error>It doesn\'t look like the running Lando site is running properly.</>');
+            return 0;
+        }
+
         $helper = $this->getHelper('question');
 
         $processingStyle = new OutputFormatterStyle('yellow', 'black', ['bold']);
