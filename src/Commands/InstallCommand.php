@@ -16,7 +16,13 @@ use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 
 class InstallCommand extends Command
 {
-    protected $drupalRoot = 'drupal8';
+    protected $settings;
+
+    public function __construct($settings, string $name = null)
+    {
+        $this->settings = $settings;
+        parent::__construct($name);
+    }
 
     protected function configure()
     {
@@ -26,6 +32,9 @@ class InstallCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $output->writeln($this->settings['drupal_root']);
+        return 0;
+
         $filesystem = new Filesystem();
         $client = HttpClient::create();
         $helper = $this->getHelper('question');
