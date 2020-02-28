@@ -17,10 +17,12 @@ use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 class InstallCommand extends Command
 {
     protected $settings;
+    protected $root_path;
 
     public function __construct($settings, string $name = null)
     {
         $this->settings = $settings;
+        $this->root_path = getcwd();
         parent::__construct($name);
     }
 
@@ -107,8 +109,13 @@ class InstallCommand extends Command
             throw new ProcessFailedException($process);
         }
 
+        if ($filesystem->exists($this->root_path . '/drupal.settings.php')) {
+            $output->writeln('<processing>Copying Drupal settings file to new release</>');
+            $filesystem->copy($this->root_path . '/drupal.settings.php', $this->root_path . '/' . $this->settings['drupal_root'] . '/web/sites/default/settings.php', true);
+        }
+
         foreach ($requested_site['commands'] as $id => $command) {
-            $output->writeln('<processing>Running ' . $id . '</>')
+            $output->writeln('<processing>Running ' . $id . '</>');
             $process = new Process(explode(' ', $command));
             $process->setWorkingDirectory('drupal8');
             $process->run();
