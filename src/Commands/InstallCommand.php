@@ -48,7 +48,7 @@ class InstallCommand extends Command
         $response = $client->request('GET', $matches[0][1]);
 
         if ($response->getStatusCode() !== 200) {
-            $output->writeln('<error>It doesn\'t look like the running Lando site is running properly.</>');
+            $output->writeln('<error>It doesn\'t look like the Lando site is running properly. Response was: ' . $response->getStatusCode() . '</>');
             return 0;
         }
 
@@ -85,7 +85,7 @@ class InstallCommand extends Command
         $question_release = new ChoiceQuestion('<question>Please select a ' . $requested_site['name'] . ' release to install</>', $release_names, 0);
         $requested_release = $helper->ask($input, $output, $question_release);
 
-        if ($filesystem->exists($this->drupalRoot)) {
+        if ($filesystem->exists($this->settings['drupal_root'])) {
 
             $overwrite_question = new ConfirmationQuestion('<question>The Drupal directory exists and will be overwritten, do you want to continue? (Y/n) </>', true);
 
@@ -95,7 +95,7 @@ class InstallCommand extends Command
             }
 
             $output->writeln('<comment>Deleting existing Drupal directory.</>');
-            $filesystem->remove([$this->drupalRoot]);
+            $filesystem->remove([$this->settings['drupal_root']]);
         }
 
         $output->writeln('<processing>Cloning release: ' . $requested_release . '</>');
@@ -108,8 +108,7 @@ class InstallCommand extends Command
         }
 
         foreach ($requested_site['commands'] as $id => $command) {
-            $output->writeln('<processing>Running ' . $id . '</>');
-            $output->writeln('<processing>Running ' . $command . '</>');
+            $output->writeln('<processing>Running ' . $id . '</>')
             $process = new Process(explode(' ', $command));
             $process->setWorkingDirectory('drupal8');
             $process->run();
