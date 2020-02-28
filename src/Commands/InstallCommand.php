@@ -63,6 +63,11 @@ class InstallCommand extends Command
 
         $sites = json_decode($content, TRUE);
 
+        if ($sites === null && json_last_error() !== JSON_ERROR_NONE) {
+            $output->writeln('<error>Unable to parse the sites.json file</>');
+            return 0;
+        }
+
         if (count($sites) > 1) {
             $question_site = new ChoiceQuestion('<question>Please select a site to install</>', array_column($sites, 'name'), 0);
             $requested_site = $helper->ask($input, $output, $question_site);
@@ -70,7 +75,7 @@ class InstallCommand extends Command
         } elseif (count($sites) === 1) {
             $requested_site = $sites[0];
         } else {
-            $output->writeln('Unable to fetch site details from sites.json');
+            $output->writeln('<error>Unable to fetch site details from sites.json</>');
             return 0;
         }
 
@@ -78,6 +83,12 @@ class InstallCommand extends Command
 
         $content = $response->getContent();
         $releases = json_decode($content);
+
+        if ($releases === null && json_last_error() !== JSON_ERROR_NONE) {
+            $output->writeln('<error>Unable to parse the releases data</>');
+            return 0;
+        }
+
         $release_names = [];
 
         foreach ($releases as $release) {
@@ -126,6 +137,7 @@ class InstallCommand extends Command
                 } else {
                     throw new ProcessFailedException($process);
                 }
+                $output->write('<bg=green;fg=black;options=bold>.</>');
             }
         }
 
