@@ -58,7 +58,7 @@ class InstallCommand extends Command
             $release_names[] = $release->name;
         }
 
-        $question_release = new ChoiceQuestion('<>Please select a ' . $requested_site['name'] . ' release to install</>', $release_names, 0);
+        $question_release = new ChoiceQuestion('<question>Please select a ' . $requested_site['name'] . ' release to install</>', $release_names, 0);
         $requested_release = $helper->ask($input, $output, $question_release);
 
         if ($filesystem->exists($this->drupalRoot)) {
@@ -77,17 +77,27 @@ class InstallCommand extends Command
         $output->writeln('<processing>Cloning release: ' . $requested_release . '</>');
 
         $process = new Process(['git', 'clone', 'git@github.com:' . $requested_site['repo_path'] . '.git', 'drupal8', '--branch', $requested_release]);
-        $process->setTimeout(1200);
         $process->run();
 
         if (!$process->isSuccessful()) {
             throw new ProcessFailedException($process);
         }
 
-        $output->writeln('<processing>Running Composer Install</>');
-        $process = new Process(['composer', 'install', '-d', $this->drupalRoot]);
-        $process->setTimeout(1200);
-        $process->run();
+        foreach ($requested_site['commands'] as $id => $command) {
+            $output->writeln('<processing>Running ' . $id . '</>');
+            $output->writeln('<processing>Running ' . $command . '</>');
+            $process = new Process(explode(' ', $command));
+            $process->setWorkingDirectory('drupal8');
+            $process->run();
+
+            while ($process->isRunning()) {
+                if ($process->isSuccessful()) {
+                    break;
+                } else {
+                    throw new ProcessFailedException($process);
+                }
+            }
+        }
 
         $output->writeln('<bg=green;fg=black;options=bold>Install complete</>');
 
