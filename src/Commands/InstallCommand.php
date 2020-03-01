@@ -45,8 +45,14 @@ class InstallCommand extends Command
             return 0;
         }
 
+        $helper = $this->getHelper('question');
+
+        $processingStyle = new OutputFormatterStyle('yellow', 'black', ['bold']);
+        $output->getFormatter()->setStyle('processing', $processingStyle);
+
         // Run a Lando Info command so we can extract the site URL and
         // verify that lando is running.
+        $output->writeln('Verifing that Lando is running and site is available.');
         $process = new Process(['lando', 'info']);
         $process->run();
         $info = $process->getOutput();
@@ -64,11 +70,6 @@ class InstallCommand extends Command
             $output->writeln('<error>It doesn\'t look like the Lando site is running properly. Response was: ' . $response->getStatusCode() . '</>');
             return 0;
         }
-
-        $helper = $this->getHelper('question');
-
-        $processingStyle = new OutputFormatterStyle('yellow', 'black', ['bold']);
-        $output->getFormatter()->setStyle('processing', $processingStyle);
 
         // Extract details for the sites that we can install.
         $content = file_get_contents('./sites.json');
@@ -153,7 +154,6 @@ class InstallCommand extends Command
                 } else {
                     throw new ProcessFailedException($process);
                 }
-                $output->write('<bg=green;fg=black;options=bold>.</>');
             }
         }
 
