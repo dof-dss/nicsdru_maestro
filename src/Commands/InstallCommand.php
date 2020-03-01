@@ -13,6 +13,7 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
+use Symfony\Component\Console\Command\LockableTrait;
 
 class InstallCommand extends Command
 {
@@ -20,6 +21,7 @@ class InstallCommand extends Command
     protected $rootpath;
     protected $filesystem;
     protected $httpclient;
+    use LockableTrait;
 
     public function __construct($settings, string $name = null)
     {
@@ -38,6 +40,10 @@ class InstallCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        if (!$this->lock()) {
+            $output->writeln('The command is already running in another process.');
+            return 0;
+        }
 
         // Run a Lando Info command so we can extract the site URL and
         // verify that lando is running.
@@ -152,7 +158,8 @@ class InstallCommand extends Command
         }
 
         $output->writeln('<bg=green;fg=black;options=bold>Install complete</>');
-
+        $this->release();
+        
         return 1;
     }
 }
