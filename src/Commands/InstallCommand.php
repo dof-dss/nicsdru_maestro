@@ -17,12 +17,16 @@ use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 class InstallCommand extends Command
 {
     protected $settings;
-    protected $root_path;
+    protected $rootpath;
+    protected $filesystem;
+    protected $httpclient;
 
     public function __construct($settings, string $name = null)
     {
         $this->settings = $settings;
-        $this->root_path = getcwd();
+        $this->rootpath = getcwd();
+        $this->filesystem = new Filesystem();
+        $this->httpclient = HttpClient::create();
         parent::__construct($name);
     }
 
@@ -34,8 +38,6 @@ class InstallCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $filesystem = new Filesystem();
-        $client = HttpClient::create();
 
         // Run a Lando Info command so we can extract the site URL and
         // verify that lando is running.
@@ -50,7 +52,7 @@ class InstallCommand extends Command
         }
 
         // HTTP request to verify that the site is running.
-        $response = $client->request('GET', $matches[0][1]);
+        $response = $this->httpclient->request('GET', $matches[0][1]);
 
         if ($response->getStatusCode() !== 200) {
             $output->writeln('<error>It doesn\'t look like the Lando site is running properly. Response was: ' . $response->getStatusCode() . '</>');
@@ -83,7 +85,7 @@ class InstallCommand extends Command
         }
 
         // Request release tags for the site repo.
-        $response = $client->request('GET', 'https://api.github.com/repos/' . $requested_site['repo_path'] . '/tags');
+        $response = $this->httpclient->request('GET', 'https://api.github.com/repos/' . $requested_site['repo_path'] . '/tags');
 
         $content = $response->getContent();
         $releases = json_decode($content);
@@ -103,7 +105,7 @@ class InstallCommand extends Command
         $requested_release = $helper->ask($input, $output, $question_release);
 
         // Check for existing site installs and prompt user to continue or exit.
-        if ($filesystem->exists($this->settings['drupal_root'])) {
+        if ($this->filesystem->exists($this->settings['drupal_root'])) {
 
             $overwrite_question = new ConfirmationQuestion('<question>The Drupal directory exists and will be overwritten, do you want to continue? (Y/n) </>', true);
 
@@ -113,7 +115,7 @@ class InstallCommand extends Command
             }
 
             $output->writeln('<comment>Deleting existing Drupal directory.</>');
-            $filesystem->remove([$this->settings['drupal_root']]);
+            $this->filesystem->remove([$this->settings['drupal_root']]);
         }
 
         // Clone the site URL release branch.
@@ -126,9 +128,9 @@ class InstallCommand extends Command
         }
 
         // If we have a drupal.settings.php file, copy to the cloned repo.
-        if ($filesystem->exists($this->root_path . '/drupal.settings.php')) {
+        if ($this->filesystem->exists($this->rootpath . '/drupal.settings.php')) {
             $output->writeln('<processing>Copying Drupal settings file to new release</>');
-            $filesystem->copy($this->root_path . '/drupal.settings.php', $this->root_path . '/' . $this->settings['drupal_root'] . '/web/sites/default/settings.php', true);
+            $this->filesystem->copy($this->rootpath . '/drupal.settings.php', $this->rootpath . '/' . $this->settings['drupal_root'] . '/web/sites/default/settings.php', true);
         }
 
         // The Process component doesn't profile a good way of chaining commands.
