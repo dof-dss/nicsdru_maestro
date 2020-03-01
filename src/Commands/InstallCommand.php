@@ -37,6 +37,8 @@ class InstallCommand extends Command
         $filesystem = new Filesystem();
         $client = HttpClient::create();
 
+        // Run a Lando Info command so we can extract the site URL and
+        // verify that lando is running.
         $process = new Process(['lando', 'info']);
         $process->run();
         $info = $process->getOutput();
@@ -47,6 +49,7 @@ class InstallCommand extends Command
             return 0;
         }
 
+        // HTTP request to verify that the site is running.
         $response = $client->request('GET', $matches[0][1]);
 
         if ($response->getStatusCode() !== 200) {
@@ -59,8 +62,8 @@ class InstallCommand extends Command
         $processingStyle = new OutputFormatterStyle('yellow', 'black', ['bold']);
         $output->getFormatter()->setStyle('processing', $processingStyle);
 
+        // Extract details for the sites that we can install.
         $content = file_get_contents('./sites.json');
-
         $sites = json_decode($content, TRUE);
 
         if ($sites === null && json_last_error() !== JSON_ERROR_NONE) {
@@ -79,6 +82,7 @@ class InstallCommand extends Command
             return 0;
         }
 
+        // Request release tags for the site repo.
         $response = $client->request('GET', 'https://api.github.com/repos/' . $requested_site['repo_path'] . '/tags');
 
         $content = $response->getContent();
@@ -98,6 +102,7 @@ class InstallCommand extends Command
         $question_release = new ChoiceQuestion('<question>Please select a ' . $requested_site['name'] . ' release to install</>', $release_names, 0);
         $requested_release = $helper->ask($input, $output, $question_release);
 
+        // Check for existing site installs and prompt user to continue or exit.
         if ($filesystem->exists($this->settings['drupal_root'])) {
 
             $overwrite_question = new ConfirmationQuestion('<question>The Drupal directory exists and will be overwritten, do you want to continue? (Y/n) </>', true);
@@ -111,8 +116,8 @@ class InstallCommand extends Command
             $filesystem->remove([$this->settings['drupal_root']]);
         }
 
+        // Clone the site URL release branch.
         $output->writeln('<processing>Cloning release: ' . $requested_release . '</>');
-
         $process = new Process(['git', 'clone', 'git@github.com:' . $requested_site['repo_path'] . '.git', 'drupal8', '--branch', $requested_release]);
         $process->run();
 
@@ -120,11 +125,14 @@ class InstallCommand extends Command
             throw new ProcessFailedException($process);
         }
 
+        // If we have a drupal.settings.php file, copy to the cloned repo.
         if ($filesystem->exists($this->root_path . '/drupal.settings.php')) {
             $output->writeln('<processing>Copying Drupal settings file to new release</>');
             $filesystem->copy($this->root_path . '/drupal.settings.php', $this->root_path . '/' . $this->settings['drupal_root'] . '/web/sites/default/settings.php', true);
         }
 
+        // The Process component doesn't profile a good way of chaining commands.
+        // Each will run as a separate shell instance.
         foreach ($requested_site['commands'] as $id => $command) {
             $output->writeln('<processing>Running ' . $id . '</>');
             $process = new Process(explode(' ', $command));
