@@ -4,9 +4,6 @@
     "repo_path": "dof-dss/nidirect-drupal",
     "commands": {
       "composer install": "composer install",
-      "cache clear": "lando drush cr",
-      "config import": "lando drush cim -y",
-      "update db": "lando drush updb -y",
       "cache clear": "lando drush cr"
     }
   },
