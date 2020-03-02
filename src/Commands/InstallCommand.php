@@ -42,12 +42,13 @@ class InstallCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $io = new SymfonyStyle($input, $output);
+
+        // Prevent the command from running multiple times.
         if (!$this->lock()) {
             $io->warning('The command is already running in another process');
             return 0;
         }
-
-        $io = new SymfonyStyle($input, $output);
 
         // Run a Lando Info command so we can extract the site URL and
         // verify that lando is running.
