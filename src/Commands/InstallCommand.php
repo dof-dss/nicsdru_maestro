@@ -15,9 +15,12 @@ class InstallCommand extends Command
 {
     protected $appPath;
     protected $drupalPath;
+    protected $siteInfo;
     protected $timeout;
     protected $fileSystem;
     protected $httpClient;
+    protected $landoURL;
+    protected $release;
     use LockableTrait;
 
     public function __construct($settings, string $name = null)
@@ -59,9 +62,11 @@ class InstallCommand extends Command
             return 0;
         }
 
+        $this->landoURL = $matches[0][1];
+
         // HTTP request to verify that the site is running.
         $io->writeln('Checking if site is running');
-        $response = $this->httpClient->request('GET', $matches[0][1]);
+        $response = $this->httpClient->request('GET', $this->landoURL);
 
         if ($response->getStatusCode() !== 200) {
             $io->warning('Lando site unavailable (404), some commands may not run properly or at all');
@@ -86,8 +91,10 @@ class InstallCommand extends Command
             return 0;
         }
 
+        $this->siteInfo = (object) $requested_site;
+
         // Request release tags for the site repo.
-        $response = $this->httpClient->request('GET', 'https://api.github.com/repos/' . $requested_site['repo_path'] . '/tags');
+        $response = $this->httpClient->request('GET', 'https://api.github.com/repos/' . $this->siteInfo->repoPath . '/tags');
 
         $content = $response->getContent();
         $releases = json_decode($content);
@@ -103,7 +110,7 @@ class InstallCommand extends Command
             $release_names[] = $release->name;
         }
 
-        $requested_release = $io->choice('Please select a ' . $requested_site['name'] . ' release to install', $release_names);
+        $this->release = $io->choice('Please select a ' . $requested_site['name'] . ' release to install', $release_names);
 
         // Check for existing site installs and prompt user to continue or exit.
         if ($this->fileSystem->exists($this->drupalPath)) {
@@ -118,8 +125,8 @@ class InstallCommand extends Command
         }
 
         // Clone the site URL release branch.
-        $io->writeln('Cloning release: ' . $requested_release);
-        $process = new Process(['git', 'clone', 'git@github.com:' . $requested_site['repo_path'] . '.git', $this->drupalPath, '--branch', $requested_release]);
+        $io->writeln('Cloning release: ' . $this->release);
+        $process = new Process(['git', 'clone', 'git@github.com:' . $this->siteInfo->repoPath . '.git', $this->drupalPath, '--branch', $this->release]);
         $process->run();
 
         if (!$process->isSuccessful()) {
@@ -135,9 +142,9 @@ class InstallCommand extends Command
         // The Process component doesn't profile a good way of chaining
         // commands and reacting to events on those.
         // Each will run as a separate shell instance one after the other.
-        $io->progressStart(count($requested_site['commands']));
+        $io->progressStart(count($this->siteInfo->commands));
 
-        foreach ($requested_site['commands'] as $id => $command) {
+        foreach ($this->siteInfo->commands as $id => $command) {
             $io->newLine();
             $io->writeln('Running ' . $id);
             $process = new Process(explode(' ', $command));
@@ -147,9 +154,8 @@ class InstallCommand extends Command
         }
 
         $io->progressFinish();
-        $io->newLine();
-        $io->writeln('DONE!');
         $io->success('Install complete');
+        $io->note('More information about this release can be viewed at: https://github.com/' . $this->siteInfo->repoPath . '/releases/tag/' . $this->release);
         $this->release();
         
         return 1;

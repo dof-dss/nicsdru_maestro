@@ -1,15 +1,17 @@
 [
   {
     "name": "NIDirect",
-    "repo_path": "dof-dss/nidirect-drupal",
+    "repoPath": "dof-dss/nidirect-drupal",
     "commands": {
       "composer install": "composer install",
+      "config import": "lando drush cim -y",
+      "update db": "lando drush updb -y",
       "cache clear": "lando drush cr"
     }
   },
   {
     "name": "Cybersecurity",
-    "repo_path": "dof-dss/nicsdru_cybersecurity",
+    "repoPath": "dof-dss/nicsdru_cybersecurity",
     "commands": {
       "cache clear": "lando drush cr",
       "config import": "lando drush cim -y",
