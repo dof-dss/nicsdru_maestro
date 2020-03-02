@@ -13,6 +13,8 @@ use Symfony\Component\Console\Command\LockableTrait;
 
 class InstallCommand extends Command
 {
+    use LockableTrait;
+
     protected $appPath;
     protected $drupalPath;
     protected $siteInfo;
@@ -21,7 +23,6 @@ class InstallCommand extends Command
     protected $httpClient;
     protected $landoURL;
     protected $release;
-    use LockableTrait;
 
     public function __construct($settings, string $name = null)
     {
@@ -43,6 +44,7 @@ class InstallCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $io = new SymfonyStyle($input, $output);
+        $io->title('Maestro release installer');
 
         // Prevent the command from running multiple times.
         if (!$this->lock()) {
@@ -52,7 +54,7 @@ class InstallCommand extends Command
 
         // Run a Lando Info command so we can extract the site URL and
         // verify that lando is running.
-        $io->writeln('Verifing that Lando is running and site is available');
+        $io->text('Verifing that Lando is running and site is available');
         $process = new Process(['lando', 'info']);
         $process->run();
         $info = $process->getOutput();
@@ -66,7 +68,7 @@ class InstallCommand extends Command
         $this->landoURL = $matches[0][1];
 
         // HTTP request to verify that the site is running.
-        $io->writeln('Checking if site is running');
+        $io->text('Checking if site is running');
         $response = $this->httpClient->request('GET', $this->landoURL);
 
         if ($response->getStatusCode() !== 200) {
@@ -117,16 +119,16 @@ class InstallCommand extends Command
         if ($this->fileSystem->exists($this->drupalPath)) {
 
             if (!$io->confirm('The Drupal directory exists and will be overwritten, do you want to continue?', TRUE)) {
-                $io->writeln('Aborting install');
+                $io->warning('Aborting install');
                 return 0;
             }
 
-            $io->writeln('Deleting existing Drupal directory');
+            $io->text('Deleting existing Drupal directory');
             $this->fileSystem->remove([$this->drupalPath]);
         }
 
         // Clone the site URL release branch.
-        $io->writeln('Cloning release: ' . $this->release);
+        $io->text('Cloning release: ' . $this->release);
         $process = new Process(['git', 'clone', 'git@github.com:' . $this->siteInfo->repoPath . '.git', $this->drupalPath, '--branch', $this->release]);
         $process->run();
 
@@ -136,18 +138,19 @@ class InstallCommand extends Command
 
         // If we have a drupal.settings.php file, copy to the cloned repo.
         if ($this->fileSystem->exists($this->appPath . '/drupal.settings.php')) {
-            $io->writeln('Copying Drupal settings file to new release');
+            $io->text('Copying Drupal settings file to new release');
             $this->fileSystem->copy($this->appPath . '/drupal.settings.php', $this->appPath . '/' . $this->drupalPath . '/web/sites/default/settings.php', true);
         }
 
         // The Process component doesn't profile a good way of chaining
         // commands and reacting to events on those.
         // Each will run as a separate shell instance one after the other.
+        $io->section('Running commands');
         $io->progressStart(count($this->siteInfo->commands));
 
         foreach ($this->siteInfo->commands as $id => $command) {
             $io->newLine();
-            $io->writeln('Running ' . $id);
+            $io->text('Running ' . $id);
             $process = new Process(explode(' ', $command));
             $process->setWorkingDirectory($this->drupalPath);
             $process->run();
