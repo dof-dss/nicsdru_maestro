@@ -1,2 +1,8 @@
-vendor
-.idea
+/**
+!/.gitignore
+!/maestro
+!/settings.php
+!/sites.json
+!/composer.json
+!/composer.local
+!/src/*
