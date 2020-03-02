@@ -132,23 +132,23 @@ class InstallCommand extends Command
             $this->fileSystem->copy($this->appPath . '/drupal.settings.php', $this->appPath . '/' . $this->drupalPath . '/web/sites/default/settings.php', true);
         }
 
-        // The Process component doesn't profile a good way of chaining commands.
-        // Each will run as a separate shell instance.
+        // The Process component doesn't profile a good way of chaining
+        // commands and reacting to events on those.
+        // Each will run as a separate shell instance one after the other.
+        $io->progressStart(count($requested_site['commands']));
+
         foreach ($requested_site['commands'] as $id => $command) {
+            $io->newLine();
             $io->writeln('Running ' . $id);
             $process = new Process(explode(' ', $command));
             $process->setWorkingDirectory($this->drupalPath);
             $process->run();
-
-            while ($process->isRunning()) {
-                if ($process->isSuccessful()) {
-                    break;
-                } else {
-                    throw new ProcessFailedException($process);
-                }
-            }
+            $io->progressAdvance();
         }
 
+        $io->progressFinish();
+        $io->newLine();
+        $io->writeln('DONE!');
         $io->success('Install complete');
         $this->release();
         
