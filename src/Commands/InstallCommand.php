@@ -84,6 +84,8 @@ class InstallCommand extends Command
             return 0;
         }
 
+        // If we have multiple sites defined, display a choice, otherwise
+        // use the first instance.
         if (count($sites) > 1) {
             $requested_site = $io->choice('Please select a site to install', array_column($sites, 'name'));
             $requested_site = $sites[array_search($requested_site, array_column($sites, 'name'))];
@@ -107,13 +109,7 @@ class InstallCommand extends Command
             return 0;
         }
 
-        $release_names = [];
-
-        foreach ($releases as $release) {
-            $release_names[] = $release->name;
-        }
-
-        $this->release = $io->choice('Please select a ' . $requested_site['name'] . ' release to install', $release_names);
+        $this->release = $io->choice('Please select a ' . $requested_site['name'] . ' release to install', array_column($releases, 'name'));
 
         // Check for existing site installs and prompt user to continue or exit.
         if ($this->fileSystem->exists($this->drupalPath)) {
