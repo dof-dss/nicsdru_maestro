@@ -119,6 +119,11 @@ class InstallCommand extends Command
                 return 0;
             }
 
+            // Create a backup of the Drupal sites directory, we will copy
+            // this over once cloning is complete.
+            $io->text('Backing up Drupal \'sites\' directory (This could take a while)');
+            $this->fileSystem->mirror($this->drupalPath . '/web/sites', $this->appPath . '/sites_backup');
+
             $io->text('Deleting existing Drupal directory');
             $this->fileSystem->remove([$this->drupalPath]);
         }
@@ -131,6 +136,10 @@ class InstallCommand extends Command
         if (!$process->isSuccessful()) {
             throw new ProcessFailedException($process);
         }
+
+        $io->text('Restoring Drupal \'sites\' directory (This could take a while)');
+        $this->fileSystem->mirror($this->appPath . '/sites_backup', $this->drupalPath . '/web/sites');
+        $this->fileSystem->remove([$this->appPath . '/sites_backup']);
 
         // If we have a drupal.settings.php file, copy to the cloned repo.
         if ($this->fileSystem->exists($this->appPath . '/drupal.settings.php')) {
