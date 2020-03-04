@@ -98,18 +98,24 @@ class InstallCommand extends Command
 
         $this->siteInfo = (object) $requested_site;
 
-        // Request release tags for the site repo.
-        $response = $this->httpClient->request('GET', 'https://api.github.com/repos/' . $this->siteInfo->repoPath . '/tags');
+        $install_type = $io->choice('What do you want to install?', ['branch', 'release'], 'branch');
 
-        $content = $response->getContent();
-        $releases = json_decode($content);
+        if ($install_type == 'branch') {
+            $branch = $io->ask('Please provide the name of the branch');
+        } else {
+            // Request release tags for the site repo.
+            $response = $this->httpClient->request('GET', 'https://api.github.com/repos/' . $this->siteInfo->repoPath . '/tags');
 
-        if ($releases === null && json_last_error() !== JSON_ERROR_NONE) {
-            $io->error('Unable to parse the releases data');
-            return 0;
+            $content = $response->getContent();
+            $releases = json_decode($content);
+
+            if ($releases === null && json_last_error() !== JSON_ERROR_NONE) {
+                $io->error('Unable to parse the releases data');
+                return 0;
+            }
+
+            $this->release = $io->choice('Please select a ' . $requested_site['name'] . ' release to install', array_column($releases, 'name'));
         }
-
-        $this->release = $io->choice('Please select a ' . $requested_site['name'] . ' release to install', array_column($releases, 'name'));
 
         // Check for existing site installs and prompt user to continue or exit.
         if ($this->fileSystem->exists($this->drupalPath)) {
