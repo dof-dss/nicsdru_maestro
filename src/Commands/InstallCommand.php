@@ -41,13 +41,13 @@ class InstallCommand extends Command
     protected function configure()
     {
         $this->setName('install')
-            ->setDescription('Install a site release');
+            ->setDescription('Install a site from a branch or release tag');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $this->display = new SymfonyStyle($input, $output);
-        $this->display->title('Maestro release installer');
+        $this->display->title('Maestro site installer');
 
         // Prevent the command from running multiple times.
         if (!$this->lock()) {
