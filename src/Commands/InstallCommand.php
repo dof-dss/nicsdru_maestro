@@ -145,11 +145,7 @@ class InstallCommand extends Command
             $this->fileSystem->copy($this->appPath . '/drupal.settings.php', $this->appPath . '/' . $this->drupalPath . '/web/sites/default/settings.php', true);
         }
 
-        // The Process component doesn't profile a good way of chaining
-        // commands and reacting to events on those.
-        // Each will run as a separate shell instance one after the other.
-        $this->display->section('Running commands');
-        $this->display->progressStart(count($this->siteInfo->commands));
+        $this->runSiteCommands();
 
         $this->display->success('Install complete');
         // Provide link to release notes.
@@ -190,5 +186,24 @@ class InstallCommand extends Command
         }
 
         return $this->display->choice('Please select a ' . $this->siteInfo->name . ' release to install', array_column($releases, 'name'));
+    }
+
+    protected function runSiteCommands() {
+        // The Process component doesn't profile a good way of chaining
+        // commands and reacting to events on those.
+        // Each will run as a separate shell instance one after the other.
+        $this->display->section('Running commands');
+        $this->display->progressStart(count($this->siteInfo->commands));
+
+        foreach ($this->siteInfo->commands as $id => $command) {
+            $this->display->newLine();
+            $this->display->text('Running ' . $id);
+            $process = new Process(explode(' ', $command));
+            $process->setWorkingDirectory($this->drupalPath);
+            $process->run();
+            $this->display->progressAdvance();
+        }
+
+        $this->display->progressFinish();
     }
 }
