@@ -161,9 +161,39 @@ class InstallCommand extends Command
 
         $this->display->progressFinish();
         $this->display->success('Install complete');
-        $this->display->note('More information about this release can be viewed at: https://github.com/' . $this->siteInfo->repoPath . '/releases/tag/' . $this->release);
+        $this->display->note('More information about this ' . $this->cloneType . ' can be viewed at: https://github.com/' . $this->siteInfo->repoPath . '/releases/tag/' . $this->branch);
         $this->release();
-        
+
         return 1;
+    }
+
+    protected function promptBranch() {
+        $branch = $this->display->ask('Please provide the name of the git branch');
+        // Verify that branch exists on the repo.
+        $response = $this->httpClient->request('GET', 'https://api.github.com/repos/' . $this->siteInfo->repoPath . '/branches/' . $branch);
+
+        // If the branch info isn't found, prompt again.
+        if ($response->getStatusCode() == '404') {
+            $this->display->warning('Branch: ' . $branch . ' not found');
+            $this->promptBranch();
+        } else {
+            return $branch;
+        }
+    }
+
+    protected function promptRelease() {
+        // Request release tags for the site repo.
+        $response = $this->httpClient->request('GET', 'https://api.github.com/repos/' . $this->siteInfo->repoPath . '/tags');
+
+        $content = $response->getContent();
+        $releases = json_decode($content);
+        // todo: limit the number of releases displayed.
+
+        if ($releases === null && json_last_error() !== JSON_ERROR_NONE) {
+            $this->display->error('Unable to parse the releases data');
+            return 0;
+        }
+
+        return $this->display->choice('Please select a ' . $this->siteInfo->name . ' release to install', array_column($releases, 'name'));
     }
 }
