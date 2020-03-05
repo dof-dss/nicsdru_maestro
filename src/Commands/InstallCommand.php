@@ -178,7 +178,9 @@ class InstallCommand extends Command
 
         $content = $response->getContent();
         $releases = json_decode($content);
-        // todo: limit the number of releases displayed.
+
+        // Limit the number of releases displayed to the latest 10.
+        $releases = array_splice($releases, 0, 10);
 
         if ($releases === null && json_last_error() !== JSON_ERROR_NONE) {
             $this->display->error('Unable to parse the releases data');
