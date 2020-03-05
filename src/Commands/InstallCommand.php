@@ -128,7 +128,7 @@ class InstallCommand extends Command
             if (!$this->fileSystem->exists($this->appPath . '/sites_backup')) {
                 $this->fileSystem->mkdir($this->appPath . '/sites_backup');
             }
-            $this->fileSystem->mirror($this->drupalPath . '/web/sites', $this->appPath . '/sites_backup', TRUE);
+            $this->fileSystem->mirror($this->drupalPath . '/web/sites', $this->appPath . '/sites_backup', NULL, ['override' => TRUE]);
 
             $this->display->text('Deleting existing Drupal directory');
             $this->fileSystem->remove([$this->drupalPath]);
