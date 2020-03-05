@@ -125,7 +125,10 @@ class InstallCommand extends Command
             // Create a backup of the Drupal sites directory, we will copy
             // this over once cloning is complete.
             $this->display->text('Backing up Drupal \'sites\' directory (This could take a while)');
-            $this->fileSystem->mirror($this->drupalPath . '/web/sites', $this->appPath . '/sites_backup');
+            if (!$this->fileSystem->exists($this->appPath . '/sites_backup')) {
+                $this->fileSystem->mkdir($this->appPath . '/sites_backup');
+            }
+            $this->fileSystem->mirror($this->drupalPath . '/web/sites', $this->appPath . '/sites_backup', TRUE);
 
             $this->display->text('Deleting existing Drupal directory');
             $this->fileSystem->remove([$this->drupalPath]);
