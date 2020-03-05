@@ -23,6 +23,7 @@ class InstallCommand extends Command
     protected $fileSystem;
     protected $httpClient;
     protected $landoURL;
+    protected $installType;
     protected $branch;
     protected $display;
 
@@ -100,9 +101,9 @@ class InstallCommand extends Command
 
         $this->siteInfo = (object) $requested_site;
 
-        $install_type = $this->display->choice('What do you want to install?', InstallType::keys());
+        $this->installType = new InstallType(InstallType::toArray()[$this->display->choice('What do you want to install?', InstallType::keys())]);
 
-        if ($install_type === 0) {
+        if ($this->installType == InstallType::BRANCH()) {
             $this->branch = $this->promptBranch();
         } else {
             $this->branch = $this->promptRelease();
@@ -126,7 +127,7 @@ class InstallCommand extends Command
         }
 
         // Clone the site branch/release.
-        $this->display->text('Cloning ' . $this->cloneType . ': ' . $this->branch);
+        $this->display->text('Cloning ' . $this->installType->getValue() . ': ' . $this->branch);
         $process = new Process(['git', 'clone', 'git@github.com:' . $this->siteInfo->repoPath . '.git', $this->drupalPath, '--branch', $this->branch]);
         $process->run();
 
@@ -150,18 +151,12 @@ class InstallCommand extends Command
         $this->display->section('Running commands');
         $this->display->progressStart(count($this->siteInfo->commands));
 
-        foreach ($this->siteInfo->commands as $id => $command) {
-            $this->display->newLine();
-            $this->display->text('Running ' . $id);
-            $process = new Process(explode(' ', $command));
-            $process->setWorkingDirectory($this->drupalPath);
-            $process->run();
-            $this->display->progressAdvance();
+        $this->display->success('Install complete');
+        // Provide link to release notes.
+        if ($this->installType == InstallType::RELEASE()) {
+            $this->display->note('More information about this release can be viewed at: https://github.com/' . $this->siteInfo->repoPath . '/releases/tag/' . $this->branch);
         }
 
-        $this->display->progressFinish();
-        $this->display->success('Install complete');
-        $this->display->note('More information about this ' . $this->cloneType . ' can be viewed at: https://github.com/' . $this->siteInfo->repoPath . '/releases/tag/' . $this->branch);
         $this->release();
 
         return 1;
