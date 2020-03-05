@@ -79,8 +79,13 @@ class InstallCommand extends Command
         }
 
         // Extract details for the sites that we can install.
-        $content = file_get_contents('./sites.json');
-        $sites = json_decode($content, TRUE);
+        $response = $this->httpClient->request('GET', 'https://raw.githubusercontent.com/dof-dss/nicsdru_maestro/development/sites.json');
+        if ($response->getStatusCode() !== 200) {
+            $this->display->error('Unable to retrieve sites information. Server response was: ' . $response->getContent());
+            return 0;
+        }
+
+        $sites = json_decode($response->getContent(), TRUE);
 
         if ($sites === null && json_last_error() !== JSON_ERROR_NONE) {
             $this->display->caution('Unable to parse the sites.json file');
