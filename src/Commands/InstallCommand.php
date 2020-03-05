@@ -10,6 +10,7 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Command\LockableTrait;
+use Maestro\InstallType;
 
 class InstallCommand extends Command
 {
@@ -22,7 +23,7 @@ class InstallCommand extends Command
     protected $fileSystem;
     protected $httpClient;
     protected $landoURL;
-    protected $release;
+    protected $branch;
     protected $display;
 
     public function __construct($settings, string $name = null)
@@ -39,7 +40,7 @@ class InstallCommand extends Command
     protected function configure()
     {
         $this->setName('install')
-             ->setDescription('Install a site release');
+            ->setDescription('Install a site release');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -99,29 +100,12 @@ class InstallCommand extends Command
 
         $this->siteInfo = (object) $requested_site;
 
-        $install_type = $this->display->choice('What do you want to install?', ['branch', 'release'], 'branch');
+        $install_type = $this->display->choice('What do you want to install?', InstallType::keys());
 
-        if ($install_type == 'branch') {
-            $branch = $this->display->ask('Please provide the name of the git branch');
-            // Verify that branch exists on the repo.
-            $response = $this->httpClient->request('GET', 'https://api.github.com/repos/' . $this->siteInfo->repoPath . '/branches' . $branch);
-            if ($response->getStatusCode() == '404') {
-                $this->display->writeln('Branch not found, aborting.');
-            }
+        if ($install_type === 0) {
+            $this->branch = $this->promptBranch();
         } else {
-            // Request release tags for the site repo.
-            $response = $this->httpClient->request('GET', 'https://api.github.com/repos/' . $this->siteInfo->repoPath . '/tags');
-
-            $content = $response->getContent();
-            $releases = json_decode($content);
-            // todo: limit the number of releases displayed.
-
-            if ($releases === null && json_last_error() !== JSON_ERROR_NONE) {
-                $this->display->error('Unable to parse the releases data');
-                return 0;
-            }
-
-            $this->release = $this->display->choice('Please select a ' . $requested_site['name'] . ' release to install', array_column($releases, 'name'));
+            $this->branch = $this->promptRelease();
         }
 
         // Check for existing site installs and prompt user to continue or exit.
@@ -141,9 +125,9 @@ class InstallCommand extends Command
             $this->fileSystem->remove([$this->drupalPath]);
         }
 
-        // Clone the site URL release branch.
-        $this->display->text('Cloning release: ' . $this->release);
-        $process = new Process(['git', 'clone', 'git@github.com:' . $this->siteInfo->repoPath . '.git', $this->drupalPath, '--branch', $this->release]);
+        // Clone the site branch/release.
+        $this->display->text('Cloning ' . $this->cloneType . ': ' . $this->branch);
+        $process = new Process(['git', 'clone', 'git@github.com:' . $this->siteInfo->repoPath . '.git', $this->drupalPath, '--branch', $this->branch]);
         $process->run();
 
         if (!$process->isSuccessful()) {
@@ -156,7 +140,7 @@ class InstallCommand extends Command
 
         // If we have a drupal.settings.php file, copy to the cloned repo.
         if ($this->fileSystem->exists($this->appPath . '/drupal.settings.php')) {
-            $this->display->text('Copying Drupal settings file to new release');
+            $this->display->text('Copying Drupal settings file to new ' . $this->cloneType . ' site');
             $this->fileSystem->copy($this->appPath . '/drupal.settings.php', $this->appPath . '/' . $this->drupalPath . '/web/sites/default/settings.php', true);
         }
 

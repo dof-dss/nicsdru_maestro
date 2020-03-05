@@ -4,7 +4,8 @@
         "symfony/process": "^5.0",
         "symfony/http-client": "^5.0",
         "symfony/filesystem": "^5.0",
-        "symfony/lock": "^5.0"
+        "symfony/lock": "^5.0",
+        "myclabs/php-enum": "^1.7"
     },
     "autoload": {
         "psr-4": {
