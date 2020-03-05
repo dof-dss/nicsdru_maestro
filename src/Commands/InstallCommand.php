@@ -122,16 +122,23 @@ class InstallCommand extends Command
                 return 0;
             }
 
-            // Create a backup of the Drupal sites directory, we will copy
-            // this over once cloning is complete.
-            $this->display->text('Backing up Drupal \'sites\' directory (This could take a while)');
-            if (!$this->fileSystem->exists($this->appPath . '/sites_backup')) {
-                $this->fileSystem->mkdir($this->appPath . '/sites_backup');
-            }
-            $this->fileSystem->mirror($this->drupalPath . '/web/sites', $this->appPath . '/sites_backup', NULL, ['override' => TRUE]);
+            // Create a backup of the Drupal sites directory if it exists,
+            // we will copy this back into the site once cloning is complete.
+            if ($this->fileSystem->exists($this->drupalPath . '/web/sites')) {
+                $this->display->text('Backing up Drupal \'sites\' directory (This could take a while)');
 
+                // If we don't have sites backup directory, create one.
+                if (!$this->fileSystem->exists($this->appPath . '/sites_backup')) {
+                    $this->fileSystem->mkdir($this->appPath . '/sites_backup');
+                }
+                $this->fileSystem->mirror($this->drupalPath . '/web/sites', $this->appPath . '/sites_backup', NULL, ['override' => TRUE]);
+            }
+
+            // Delete any existing Drupal site (clean start).
             $this->display->text('Deleting existing Drupal directory');
             $this->fileSystem->remove([$this->drupalPath]);
+
+
         }
 
         // Clone the site branch/release.
@@ -143,9 +150,12 @@ class InstallCommand extends Command
             throw new ProcessFailedException($process);
         }
 
-        $this->display->text('Restoring Drupal \'sites\' directory (This could take a while)');
-        $this->fileSystem->mirror($this->appPath . '/sites_backup', $this->drupalPath . '/web/sites');
-        $this->fileSystem->remove([$this->appPath . '/sites_backup']);
+        // Restore sites_backup directory to site if it exists.
+        if ($this->fileSystem->exists($this->appPath . '/sites_backup')) {
+            $this->display->text('Restoring Drupal \'sites\' directory (This could take a while)');
+            $this->fileSystem->mirror($this->appPath . '/sites_backup', $this->drupalPath . '/web/sites');
+            $this->fileSystem->remove([$this->appPath . '/sites_backup']);
+        }
 
         // If we have a drupal.settings.php file, copy to the cloned repo.
         if ($this->fileSystem->exists($this->appPath . '/drupal.settings.php')) {
