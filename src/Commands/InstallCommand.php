@@ -10,6 +10,7 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Command\LockableTrait;
+use Symfony\Component\Finder\Finder;
 use Maestro\InstallType;
 
 class InstallCommand extends Command
@@ -225,5 +226,21 @@ class InstallCommand extends Command
         }
 
         $this->display->progressFinish();
+    }
+
+    protected function promptDatabase() {
+        if ($this->fileSystem->exists($this->appPath . '/imports/data')) {
+            $finder = new Finder();
+            $finder->files()->name('*.sql.gz')->in($this->appPath . '/imports/data');
+
+            if ($finder->hasResults()) {
+                $db_dumps = ['skip import'];
+                foreach ($finder as $file) {
+                    $db_dumps[] = $file->getFilename();
+                }
+
+                $this->display->choice('Select a database file to install', $db_dumps);
+            }
+        }
     }
 }
