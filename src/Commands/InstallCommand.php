@@ -30,8 +30,9 @@ class InstallCommand extends Command
 
     public function __construct($settings, string $name = null)
     {
-        $this->drupalPath = $settings['drupal_root'];
+        $this->drupalPath = trim($settings['drupal_root'], '/');
         $this->timeout = $settings['timeout'];
+        $this->db_import_path = trim($settings['db_import_path'], '/');
         $this->appPath = getcwd();
         $this->fileSystem = new Filesystem();
         $this->httpClient = HttpClient::create();
@@ -164,6 +165,8 @@ class InstallCommand extends Command
             $this->fileSystem->copy($this->appPath . '/drupal.settings.php', $this->appPath . '/' . $this->drupalPath . '/web/sites/default/settings.php', true);
         }
 
+        $this->promptDatabase();
+
         $this->runSiteCommands();
 
         $this->display->success('Install complete');
@@ -229,9 +232,9 @@ class InstallCommand extends Command
     }
 
     protected function promptDatabase() {
-        if ($this->fileSystem->exists($this->appPath . '/imports/data')) {
+        if ($this->fileSystem->exists($this->appPath . '/' . $this->db_import_path)) {
             $finder = new Finder();
-            $finder->files()->name('*.sql.gz')->in($this->appPath . '/imports/data');
+            $finder->files()->name('*.sql.gz')->in($this->appPath . '/' . $this->db_import_path);
 
             if ($finder->hasResults()) {
                 $db_dumps = ['skip import'];
@@ -239,7 +242,16 @@ class InstallCommand extends Command
                     $db_dumps[] = $file->getFilename();
                 }
 
-                $this->display->choice('Select a database file to install', $db_dumps);
+                $db_requested = $this->display->choice('Select a database file to install', $db_dumps);
+
+                if ($db_requested == 'skip import' ) {
+                    return;
+                } else {
+                    $this->display->text('Importing database ' . $db_requested);
+                    $process = new Process(['lando', 'db-import', $this->appPath . '/' . $this->db_import_path . '/' . $db_requested]);
+                    $process->run();
+                    $this->display->text('Database import complete');
+                }
             }
         }
     }
