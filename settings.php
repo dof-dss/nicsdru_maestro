@@ -12,8 +12,7 @@ $settings['drupal_root'] = 'drupal8';
 // or net connection you may need to increase this.
 $settings['timeout'] = '3600';
 
-// Duration to run symfony process commands. If you have a slow laptop
-// or net connection you may need to increase this.
+// Directory to look for database import files.
 $settings['db_import_path'] = 'imports/data';
 
 /**
