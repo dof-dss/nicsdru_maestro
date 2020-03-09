@@ -12,6 +12,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Command\LockableTrait;
 use Symfony\Component\Finder\Finder;
 use Maestro\InstallType;
+use Maestro\SitesService;
 
 class InstallCommand extends Command
 {
@@ -80,19 +81,8 @@ class InstallCommand extends Command
             $this->display->warning('Lando site unavailable (404), some commands may not run properly or at all');
         }
 
-        // Extract details for the sites that we can install.
-        $response = $this->httpClient->request('GET', 'https://raw.githubusercontent.com/dof-dss/nicsdru_maestro/development/sites.json');
-        if ($response->getStatusCode() !== 200) {
-            $this->display->error('Unable to retrieve sites information. Server response was: ' . $response->getContent());
-            return 0;
-        }
-
-        $sites = json_decode($response->getContent(), TRUE);
-
-        if ($sites === null && json_last_error() !== JSON_ERROR_NONE) {
-            $this->display->caution('Unable to parse the sites.json file');
-            return 0;
-        }
+        // Fetch sites info.
+        $sites = SitesService::getSites();
 
         // If we have multiple sites defined, display a choice, otherwise
         // use the first instance.
