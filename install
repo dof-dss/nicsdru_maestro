@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+echo 'Installing packages'
+composer install
 echo 'Creating symlink'
 ln -s "$(pwd)/maestro" /usr/local/bin/maestro
 echo 'Creating symlink'
