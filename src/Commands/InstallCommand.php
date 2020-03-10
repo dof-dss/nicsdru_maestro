@@ -160,6 +160,9 @@ class InstallCommand extends Command
         return 1;
     }
 
+    /*
+     * Display prompt to enter a branch name.
+     */
     protected function promptBranch() {
         $branch = $this->display->ask('Please provide the name of the git branch');
         // Verify that branch exists on the repo.
@@ -174,6 +177,9 @@ class InstallCommand extends Command
         }
     }
 
+    /*
+     * Display a prompt to select a release version.
+     */
     protected function promptRelease() {
         // Request release tags for the site repo.
         $response = $this->httpClient->request('GET', 'https://api.github.com/repos/' . $this->siteInfo->repoPath . '/tags');
@@ -192,25 +198,9 @@ class InstallCommand extends Command
         return $this->display->choice('Please select a ' . $this->siteInfo->name . ' release to install', array_column($releases, 'name'));
     }
 
-    protected function runSiteCommands() {
-        // The Process component doesn't profile a good way of chaining
-        // commands and reacting to events on those.
-        // Each will run as a separate shell instance one after the other.
-        $this->display->section('Running commands');
-        $this->display->progressStart(count($this->siteInfo->commands));
-
-        foreach ($this->siteInfo->commands as $id => $command) {
-            $this->display->newLine();
-            $this->display->text('Running ' . $id);
-            $process = new Process(explode(' ', $command));
-            $process->setWorkingDirectory($this->drupalPath);
-            $process->run();
-            $this->display->progressAdvance();
-        }
-
-        $this->display->progressFinish();
-    }
-
+    /*
+     * Display a prompt to select database dump to import.
+     */
     protected function promptDatabase() {
         if ($this->fileSystem->exists($this->appPath . '/' . $this->db_import_path)) {
             $finder = new Finder();
@@ -234,5 +224,27 @@ class InstallCommand extends Command
                 }
             }
         }
+    }
+
+    /*
+     * Runs a series of commands retrieved from the sites info.
+     */
+    protected function runSiteCommands() {
+        // The Process component doesn't profile a good way of chaining
+        // commands and reacting to events on those.
+        // Each will run as a separate shell instance one after the other.
+        $this->display->section('Running commands');
+        $this->display->progressStart(count($this->siteInfo->commands));
+
+        foreach ($this->siteInfo->commands as $id => $command) {
+            $this->display->newLine();
+            $this->display->text('Running ' . $id);
+            $process = new Process(explode(' ', $command));
+            $process->setWorkingDirectory($this->drupalPath);
+            $process->run();
+            $this->display->progressAdvance();
+        }
+
+        $this->display->progressFinish();
     }
 }
