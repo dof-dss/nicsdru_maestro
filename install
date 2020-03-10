@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+
+echo 'Creating symlink'
+ln -s "$(pwd)/maestro" /usr/local/bin/maestro
+echo 'Creating symlink'
+chmod +x maestro
+echo 'Complete'
