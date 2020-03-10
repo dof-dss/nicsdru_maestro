@@ -3,10 +3,11 @@
 namespace Maestro;
 
 use Symfony\Component\Process\Process;
+use Symfony\Component\HttpClient\HttpClient;
 
 class LandoService {
 
-    protected $siteUrl = '';
+    protected $url = '';
 
     public function Running() {
         $process = new Process(['lando', 'info']);
@@ -17,9 +18,16 @@ class LandoService {
         if (empty($matches[0][1])) {
             return false;
         } else {
-            $this->siteUrl = $matches[0][1];
+            $this->url = $matches[0][1];
             return true;
         }
+    }
+
+    public function SiteRunning() {
+        $httpClient = HttpClient::create();
+        $response = $httpClient->request('GET', $this->url);
+
+        return $response->getStatusCode() == 200;
     }
 
 }

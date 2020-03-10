@@ -13,6 +13,7 @@ use Symfony\Component\Console\Command\LockableTrait;
 use Symfony\Component\Finder\Finder;
 use Maestro\InstallType;
 use Maestro\SitesService;
+use Maestro\LandoService;
 
 class InstallCommand extends Command
 {
@@ -24,10 +25,10 @@ class InstallCommand extends Command
     protected $timeout;
     protected $fileSystem;
     protected $httpClient;
-    protected $landoURL;
     protected $installType;
     protected $branch;
     protected $display;
+    protected $lando;
 
     public function __construct($settings, string $name = null)
     {
@@ -37,6 +38,7 @@ class InstallCommand extends Command
         $this->appPath = getcwd();
         $this->fileSystem = new Filesystem();
         $this->httpClient = HttpClient::create();
+        $this->lando = new LandoService();
 
         parent::__construct($name);
     }
@@ -58,26 +60,16 @@ class InstallCommand extends Command
             return 0;
         }
 
-        // Run a Lando Info command so we can extract the site URL and
-        // verify that lando is running.
+        // Verify that lando is running.
         $this->display->text('Verifing that Lando is running and site is available');
-        $process = new Process(['lando', 'info']);
-        $process->run();
-        $info = $process->getOutput();
-        preg_match_all("/(http:\/\/.+)\'/m", $info, $matches, PREG_SET_ORDER, 0);
-
-        if (empty($matches[0][1])) {
+        if (!$this->lando->Running()) {
             $this->display->error('It doesn\'t look like you have a running Lando site');
             return 0;
         }
 
-        $this->landoURL = $matches[0][1];
-
-        // HTTP request to verify that the site is running.
+        // Verify that the site is running.
         $this->display->text('Checking if site is running');
-        $response = $this->httpClient->request('GET', $this->landoURL);
-
-        if ($response->getStatusCode() !== 200) {
+        if (!$this->lando->SiteRunning()) {
             $this->display->warning('Lando site unavailable (404), some commands may not run properly or at all');
         }
 
@@ -129,8 +121,6 @@ class InstallCommand extends Command
             // Delete any existing Drupal site (clean start).
             $this->display->text('Deleting existing Drupal directory');
             $this->fileSystem->remove([$this->drupalPath]);
-
-
         }
 
         // Clone the site branch/release.
